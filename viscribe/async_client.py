@@ -3,21 +3,27 @@ from typing import Any, Optional
 
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
 from aiohttp.client_exceptions import ClientError
-from pydantic import BaseModel
 
 from viscribe.config import API_BASE_URL, DEFAULT_HEADERS
 from viscribe.exceptions import APIError
 from viscribe.logger import viscribe_logger as logger
 from viscribe.models.feedback import FeedbackRequest
-from viscribe.utils.helpers import handle_async_response, validate_api_key
 from viscribe.models.image import (
-    ImageDescribeRequest, ImageDescribeResponse,
-    ImageExtractRequest, ImageExtractResponse,
-    ImageClassifyRequest, ImageClassifyResponse,
-    ImageAskRequest, ImageAskResponse,
-    ImageCompareRequest, ImageCompareResponse,
-    CreditsResponse, FeedbackCreate, FeedbackResponse,
+    CreditsResponse,
+    FeedbackCreate,
+    FeedbackResponse,
+    ImageAskRequest,
+    ImageAskResponse,
+    ImageClassifyRequest,
+    ImageClassifyResponse,
+    ImageCompareRequest,
+    ImageCompareResponse,
+    ImageDescribeRequest,
+    ImageDescribeResponse,
+    ImageExtractRequest,
+    ImageExtractResponse,
 )
+from viscribe.utils.helpers import handle_async_response, validate_api_key
 
 
 class AsyncClient:
@@ -178,7 +184,9 @@ class AsyncClient:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
 
-    async def describe_image(self, request: ImageDescribeRequest) -> ImageDescribeResponse:
+    async def describe_image(
+        self, request: ImageDescribeRequest
+    ) -> ImageDescribeResponse:
         """Send a describe image request"""
         logger.info("🔍 Starting image describe request")
         result = await self._make_request(
@@ -194,7 +202,9 @@ class AsyncClient:
         )
         return ImageExtractResponse(**result)
 
-    async def classify_image(self, request: ImageClassifyRequest) -> ImageClassifyResponse:
+    async def classify_image(
+        self, request: ImageClassifyRequest
+    ) -> ImageClassifyResponse:
         """Send an image classify request"""
         logger.info("🔍 Starting image classify request")
         result = await self._make_request(
@@ -210,7 +220,9 @@ class AsyncClient:
         )
         return ImageAskResponse(**result)
 
-    async def compare_images(self, request: ImageCompareRequest) -> ImageCompareResponse:
+    async def compare_images(
+        self, request: ImageCompareRequest
+    ) -> ImageCompareResponse:
         """Send an image compare request"""
         logger.info("🔍 Starting image compare request")
         result = await self._make_request(

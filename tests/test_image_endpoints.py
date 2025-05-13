@@ -1,14 +1,21 @@
 import pytest
 import responses
+
+from tests.utils import generate_mock_api_key
 from viscribe.client import Client
 from viscribe.models.image import (
-    ImageDescribeRequest, ImageExtractRequest, ImageClassifyRequest, ImageAskRequest, ImageCompareRequest
+    ImageAskRequest,
+    ImageClassifyRequest,
+    ImageCompareRequest,
+    ImageDescribeRequest,
+    ImageExtractRequest,
 )
-from tests.utils import generate_mock_api_key
+
 
 @pytest.fixture
 def mock_api_key():
     return generate_mock_api_key()
+
 
 @responses.activate
 def test_describe_image(mock_api_key):
@@ -19,7 +26,7 @@ def test_describe_image(mock_api_key):
             "request_id": "req-1",
             "credits_used": 1,
             "image_description": "A cat on a mat.",
-            "tags": ["cat", "mat"]
+            "tags": ["cat", "mat"],
         },
     )
     req = ImageDescribeRequest(image_url="https://img.com/cat.jpg")
@@ -34,6 +41,7 @@ def test_describe_image(mock_api_key):
         assert resp.image_description == "A cat on a mat."
         assert resp.tags == ["cat", "mat"]
 
+
 @responses.activate
 def test_extract_image(mock_api_key):
     responses.add(
@@ -42,10 +50,12 @@ def test_extract_image(mock_api_key):
         json={
             "request_id": "req-2",
             "credits_used": 2,
-            "extracted_data": {"product_name": "Widget", "price": 9.99}
+            "extracted_data": {"product_name": "Widget", "price": 9.99},
         },
     )
-    req = ImageExtractRequest(image_url="https://img.com/prod.jpg", output_schema={"type": "object"})
+    req = ImageExtractRequest(
+        image_url="https://img.com/prod.jpg", output_schema={"type": "object"}
+    )
     with Client(api_key=mock_api_key) as client:
         resp = client.extract_image(
             image_url=req.image_url,
@@ -57,18 +67,17 @@ def test_extract_image(mock_api_key):
         assert resp.extracted_data["product_name"] == "Widget"
         assert resp.extracted_data["price"] == 9.99
 
+
 @responses.activate
 def test_classify_image(mock_api_key):
     responses.add(
         responses.POST,
         "https://api.viscribe.ai/v1/images/classify",
-        json={
-            "request_id": "req-3",
-            "credits_used": 1,
-            "classification": ["cat"]
-        },
+        json={"request_id": "req-3", "credits_used": 1, "classification": ["cat"]},
     )
-    req = ImageClassifyRequest(image_url="https://img.com/cat.jpg", classes=["cat", "dog"])
+    req = ImageClassifyRequest(
+        image_url="https://img.com/cat.jpg", classes=["cat", "dog"]
+    )
     with Client(api_key=mock_api_key) as client:
         resp = client.classify_image(
             image_url=req.image_url,
@@ -81,18 +90,17 @@ def test_classify_image(mock_api_key):
         assert resp.request_id == "req-3"
         assert resp.classification == ["cat"]
 
+
 @responses.activate
 def test_ask_image(mock_api_key):
     responses.add(
         responses.POST,
         "https://api.viscribe.ai/v1/images/ask",
-        json={
-            "request_id": "req-4",
-            "credits_used": 1,
-            "answer": "Blue"
-        },
+        json={"request_id": "req-4", "credits_used": 1, "answer": "Blue"},
     )
-    req = ImageAskRequest(image_url="https://img.com/car.jpg", question="What color is the car?")
+    req = ImageAskRequest(
+        image_url="https://img.com/car.jpg", question="What color is the car?"
+    )
     with Client(api_key=mock_api_key) as client:
         resp = client.ask_image(
             image_url=req.image_url,
@@ -102,6 +110,7 @@ def test_ask_image(mock_api_key):
         assert resp.request_id == "req-4"
         assert resp.answer == "Blue"
 
+
 @responses.activate
 def test_compare_images(mock_api_key):
     responses.add(
@@ -110,10 +119,12 @@ def test_compare_images(mock_api_key):
         json={
             "request_id": "req-5",
             "credits_used": 2,
-            "comparison_result": "Both images show cats, but one is black and one is white."
+            "comparison_result": "Both images show cats, but one is black and one is white.",
         },
     )
-    req = ImageCompareRequest(image1_url="https://img.com/cat1.jpg", image2_url="https://img.com/cat2.jpg")
+    req = ImageCompareRequest(
+        image1_url="https://img.com/cat1.jpg", image2_url="https://img.com/cat2.jpg"
+    )
     with Client(api_key=mock_api_key) as client:
         resp = client.compare_images(
             image1_url=req.image1_url,
