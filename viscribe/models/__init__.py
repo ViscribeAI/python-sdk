@@ -1,6 +1,7 @@
 from .image import (
     CreditsResponse,
-    FeedbackCreate,
+    ExtractField,
+    FeedbackRequest,
     FeedbackResponse,
     ImageAskRequest,
     ImageAskResponse,

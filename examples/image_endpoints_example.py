@@ -1,11 +1,12 @@
 from viscribe.client import Client
 from viscribe.logger import viscribe_logger
+from pydantic import BaseModel
 
 viscribe_logger.set_logging(level="INFO")
 
 
 def main():
-    client = Client(api_key="vscrb-415ffd78-187f-4ed3-b295-c02c43a6f79f")
+    client = Client(api_key="vscrb-")
 
     # 1. Describe Image
     describe_resp = client.describe_image(
@@ -13,13 +14,26 @@ def main():
         generate_tags=False,
     )
     print("Describe Image:", describe_resp)
-
-    # 2. Extract Structured Data
-    # extract_resp = client.extract_image(
-    #     image_url="https://media.istockphoto.com/id/1388018793/photo/grand-canal-in-venice.jpg?s=612x612&w=0&k=20&c=uDUrctquPNUPzlpNLwTkJIkc1Gig0aUWJknF6FrqxJE=",
-    #     output_schema={"type": "object", "properties": {"product_name": {"type": "string"}}}
-    # )
-    # print("Extract Image:", extract_resp)
+    
+    # 2. Extract Structured Data - Using simple fields
+    extract_resp = client.extract_image(
+        image_url="https://media.istockphoto.com/id/1388018793/photo/grand-canal-in-venice.jpg?s=612x612&w=0&k=20&c=uDUrctquPNUPzlpNLwTkJIkc1Gig0aUWJknF6FrqxJE=",
+        fields=[
+            {"name": "city_name", "type": "text", "description": "Name of the city in the image"},
+            {"name": "water_bodies", "type": "array_text", "description": "List of water bodies visible"},
+        ],
+    )
+    print("Extract Image:", extract_resp)
+    
+    # Alternative: Using advanced_schema for complex structures
+    class Product(BaseModel):
+        product_name: str
+        price: float
+    extract_resp = client.extract_image(
+        image_url="https://media.istockphoto.com/id/1388018793/photo/grand-canal-in-venice.jpg?s=612x612&w=0&k=20&c=uDUrctquPNUPzlpNLwTkJIkc1Gig0aUWJknF6FrqxJE=",
+        advanced_schema=Product,
+    )
+    print("Extract Image (Advanced):", extract_resp)
 
     # 3. Classify Image
     classify_resp = client.classify_image(

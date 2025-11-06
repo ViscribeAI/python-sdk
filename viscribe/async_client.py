@@ -1,16 +1,17 @@
 import asyncio
-from typing import Any, Optional
+from typing import Any, Optional, Type, Union
 
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
 from aiohttp.client_exceptions import ClientError
+from pydantic import BaseModel
 
 from viscribe.config import API_BASE_URL, DEFAULT_HEADERS
 from viscribe.exceptions import APIError
 from viscribe.logger import viscribe_logger as logger
-from viscribe.models.feedback import FeedbackRequest
 from viscribe.models.image import (
     CreditsResponse,
-    FeedbackCreate,
+    ExtractField,
+    FeedbackRequest,
     FeedbackResponse,
     ImageAskRequest,
     ImageAskResponse,
@@ -141,36 +142,21 @@ class AsyncClient:
                 logger.info(f"⏳ Waiting {retry_delay}s before retry {attempt + 2}")
                 await asyncio.sleep(retry_delay)
 
-    async def submit_feedback(
-        self, request_id: str, rating: int, feedback_text: Optional[str] = None
-    ):
+    async def submit_feedback(self, request_id: str, rating: int, feedback_text: Optional[str] = None) -> FeedbackResponse:
         """Submit feedback for a request"""
         logger.info(f"📝 Submitting feedback for request {request_id}")
-        logger.debug(f"⭐ Rating: {rating}, Feedback: {feedback_text}")
-
         feedback = FeedbackRequest(
             request_id=request_id, rating=rating, feedback_text=feedback_text
         )
-        logger.debug("✅ Feedback validation passed")
+        payload = feedback.model_dump(exclude_none=True)
+        result = await self._make_request("POST", f"{API_BASE_URL}/feedback", json=payload)
+        return FeedbackResponse(**result)
 
-        result = await self._make_request(
-            "POST", f"{API_BASE_URL}/feedback", json=feedback.model_dump()
-        )
-        logger.info("✨ Feedback submitted successfully")
-        return result
-
-    async def get_credits(self):
+    async def get_credits(self) -> CreditsResponse:
         """Get credits information"""
         logger.info("💳 Fetching credits information")
-
-        result = await self._make_request(
-            "GET",
-            f"{API_BASE_URL}/credits",
-        )
-        logger.info(
-            f"✨ Credits info retrieved: {result.get('remaining_credits')} credits remaining"
-        )
-        return result
+        result = await self._make_request("GET", f"{API_BASE_URL}/credits")
+        return CreditsResponse(**result)
 
     async def close(self):
         """Close the session to free up resources"""
@@ -185,61 +171,146 @@ class AsyncClient:
         await self.close()
 
     async def describe_image(
-        self, request: ImageDescribeRequest
+        self,
+        image_url: str = None,
+        image_base64: str = None,
+        instruction: str = None,
+        generate_tags: bool = True,
     ) -> ImageDescribeResponse:
-        """Send a describe image request"""
+        """Send a describe image request with explicit arguments and validate with Pydantic."""
         logger.info("🔍 Starting image describe request")
+
+        req = ImageDescribeRequest(
+            image_url=image_url,
+            image_base64=image_base64,
+            instruction=instruction,
+            generate_tags=generate_tags,
+        )
+        payload = req.model_dump(exclude_none=True)
         result = await self._make_request(
-            "POST", f"{API_BASE_URL}/images/describe", json=request.model_dump()
+            "POST", f"{API_BASE_URL}/images/describe", json=payload
         )
         return ImageDescribeResponse(**result)
 
-    async def extract_image(self, request: ImageExtractRequest) -> ImageExtractResponse:
-        """Send an extract structured data from image request"""
+    async def extract_image(
+        self,
+        image_url: str = None,
+        image_base64: str = None,
+        fields: list = None,
+        advanced_schema: Union[dict, BaseModel, Type[BaseModel]] = None,
+        instruction: str = None,
+    ) -> ImageExtractResponse:
+        """Send an extract structured data from image request with explicit arguments and validate with Pydantic.
+        
+        Args:
+            image_url: URL of the image
+            image_base64: Base64 encoded string of the image
+            fields: List of dictionaries with 'name', 'type', and optional 'description' keys.
+                   Each field type can be 'text', 'number', 'array_text' (max 5), or 'array_number' (max 5).
+                   Max 10 fields allowed.
+            advanced_schema: Full JSON schema for complex extraction (dict), a Pydantic BaseModel instance,
+                           or a Pydantic BaseModel class. If a BaseModel is provided, it will be serialized
+                           to its JSON schema. Use this for nested structures.
+            instruction: Optional instruction to guide the extraction process.
+        
+        Note: Either fields or advanced_schema must be provided, not both.
+        """
         logger.info("🔍 Starting image extract request")
+
+        # Convert dictionaries to ExtractField models if fields are provided
+        validated_fields = None
+        if fields is not None:
+            validated_fields = [ExtractField(**field) if isinstance(field, dict) else field for field in fields]
+
+        # Convert Pydantic BaseModel to JSON schema if advanced_schema is a BaseModel
+        validated_schema = advanced_schema
+        if advanced_schema is not None:
+            if isinstance(advanced_schema, BaseModel):
+                # BaseModel instance
+                validated_schema = advanced_schema.model_json_schema()
+            elif isinstance(advanced_schema, type) and issubclass(advanced_schema, BaseModel):
+                # BaseModel class
+                validated_schema = advanced_schema.model_json_schema()
+
+        req = ImageExtractRequest(
+            image_url=image_url,
+            image_base64=image_base64,
+            fields=validated_fields,
+            advanced_schema=validated_schema,
+            instruction=instruction,
+        )
+        payload = req.model_dump(exclude_none=True)
         result = await self._make_request(
-            "POST", f"{API_BASE_URL}/images/extract", json=request.model_dump()
+            "POST", f"{API_BASE_URL}/images/extract", json=payload
         )
         return ImageExtractResponse(**result)
 
     async def classify_image(
-        self, request: ImageClassifyRequest
+        self,
+        image_url: str = None,
+        image_base64: str = None,
+        classes: list = None,
+        class_descriptions: dict = None,
+        instruction: str = None,
+        multi_label: bool = False,
     ) -> ImageClassifyResponse:
-        """Send an image classify request"""
+        """Send an image classify request with explicit arguments and validate with Pydantic."""
         logger.info("🔍 Starting image classify request")
+
+        req = ImageClassifyRequest(
+            image_url=image_url,
+            image_base64=image_base64,
+            classes=classes,
+            class_descriptions=class_descriptions,
+            instruction=instruction,
+            multi_label=multi_label,
+        )
+        payload = req.model_dump(exclude_none=True)
         result = await self._make_request(
-            "POST", f"{API_BASE_URL}/images/classify", json=request.model_dump()
+            "POST", f"{API_BASE_URL}/images/classify", json=payload
         )
         return ImageClassifyResponse(**result)
 
-    async def ask_image(self, request: ImageAskRequest) -> ImageAskResponse:
-        """Send an image VQA (ask) request"""
+    async def ask_image(
+        self,
+        image_url: str = None,
+        image_base64: str = None,
+        question: str = None,
+    ) -> ImageAskResponse:
+        """Send an image VQA (ask) request with explicit arguments and validate with Pydantic."""
         logger.info("🔍 Starting image ask (VQA) request")
-        result = await self._make_request(
-            "POST", f"{API_BASE_URL}/images/ask", json=request.model_dump()
+
+        req = ImageAskRequest(
+            image_url=image_url,
+            image_base64=image_base64,
+            question=question,
         )
+        payload = req.model_dump(exclude_none=True)
+        result = await self._make_request("POST", f"{API_BASE_URL}/images/ask", json=payload)
         return ImageAskResponse(**result)
 
     async def compare_images(
-        self, request: ImageCompareRequest
+        self,
+        image1_url: str = None,
+        image1_base64: str = None,
+        image2_url: str = None,
+        image2_base64: str = None,
+        instruction: str = None,
     ) -> ImageCompareResponse:
-        """Send an image compare request"""
+        """Send an image compare request with explicit arguments and validate with Pydantic."""
         logger.info("🔍 Starting image compare request")
+
+        req = ImageCompareRequest(
+            image1_url=image1_url,
+            image1_base64=image1_base64,
+            image2_url=image2_url,
+            image2_base64=image2_base64,
+            instruction=instruction,
+        )
+        payload = req.model_dump(exclude_none=True)
         result = await self._make_request(
-            "POST", f"{API_BASE_URL}/images/compare", json=request.model_dump()
+            "POST", f"{API_BASE_URL}/images/compare", json=payload
         )
         return ImageCompareResponse(**result)
 
-    async def get_credits(self) -> CreditsResponse:
-        """Get credits information"""
-        logger.info("💳 Fetching credits information")
-        result = await self._make_request("GET", f"{API_BASE_URL}/credits")
-        return CreditsResponse(**result)
 
-    async def submit_feedback(self, request: FeedbackCreate) -> FeedbackResponse:
-        """Submit feedback for a request"""
-        logger.info(f"📝 Submitting feedback for request {request.request_id}")
-        result = await self._make_request(
-            "POST", f"{API_BASE_URL}/feedback", json=request.model_dump()
-        )
-        return FeedbackResponse(**result)

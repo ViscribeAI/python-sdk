@@ -1,14 +1,27 @@
 # Client implementation goes here
-from typing import Any, Optional
+from typing import Any, Optional, Type, Union
 
 import requests
 import urllib3
+from pydantic import BaseModel
 from requests.exceptions import RequestException
 
 from viscribe.config import API_BASE_URL, DEFAULT_HEADERS
 from viscribe.exceptions import APIError
 from viscribe.logger import viscribe_logger as logger
-from viscribe.models.image import CreditsResponse, FeedbackCreate, FeedbackResponse
+from viscribe.models.image import CreditsResponse, FeedbackRequest, FeedbackResponse
+from viscribe.models.image import (
+    ExtractField,
+    ImageDescribeRequest,
+    ImageDescribeResponse,
+    ImageExtractRequest,
+    ImageExtractResponse,
+    ImageClassifyRequest,
+    ImageClassifyResponse,
+    ImageAskRequest,
+    ImageAskResponse,
+    ImageCompareRequest, ImageCompareResponse
+)
 from viscribe.utils.helpers import handle_sync_response, validate_api_key
 
 
@@ -138,11 +151,17 @@ class Client:
             logger.error(f"🔴 Connection Error: {str(e)}")
             raise ConnectionError(f"Failed to connect to API: {str(e)}")
 
-    def submit_feedback(self, request: FeedbackCreate) -> FeedbackResponse:
+    def submit_feedback(self, request_id: str, rating: int, feedback_text: Optional[str] = None) -> FeedbackResponse:
         """Submit feedback for a request"""
-        logger.info(f"📝 Submitting feedback for request {request.request_id}")
+        logger.info(f"📝 Submitting feedback for request {request_id}")
+        request = FeedbackRequest(
+            request_id=request_id,
+            rating=rating,
+            feedback_text=feedback_text,
+        )
+        payload = request.model_dump(exclude_none=True)
         result = self._make_request(
-            "POST", f"{API_BASE_URL}/feedback", json=request.model_dump()
+            "POST", f"{API_BASE_URL}/feedback", json=payload
         )
         return FeedbackResponse(**result)
 
@@ -161,7 +180,6 @@ class Client:
     ):
         """Send a describe image request with explicit arguments and validate with Pydantic."""
         logger.info("🔍 Starting image describe request")
-        from viscribe.models.image import ImageDescribeRequest, ImageDescribeResponse
 
         req = ImageDescribeRequest(
             image_url=image_url,
@@ -179,17 +197,47 @@ class Client:
         self,
         image_url: str = None,
         image_base64: str = None,
-        output_schema: dict = None,
+        fields: list = None,
+        advanced_schema: Union[dict, BaseModel, Type[BaseModel]] = None,
         instruction: str = None,
     ):
-        """Send an extract structured data from image request with explicit arguments and validate with Pydantic."""
+        """Send an extract structured data from image request with explicit arguments and validate with Pydantic.
+        
+        Args:
+            image_url: URL of the image
+            image_base64: Base64 encoded string of the image
+            fields: List of dictionaries with 'name', 'type', and optional 'description' keys.
+                   Each field type can be 'text', 'number', 'array_text' (max 5), or 'array_number' (max 5).
+                   Max 10 fields allowed.
+            advanced_schema: Full JSON schema for complex extraction (dict), a Pydantic BaseModel instance,
+                           or a Pydantic BaseModel class. If a BaseModel is provided, it will be serialized
+                           to its JSON schema. Use this for nested structures.
+            instruction: Optional instruction to guide the extraction process.
+        
+        Note: Either fields or advanced_schema must be provided, not both.
+        """
         logger.info("🔍 Starting image extract request")
-        from viscribe.models.image import ImageExtractRequest, ImageExtractResponse
+
+        # Convert dictionaries to ExtractField models if fields are provided
+        validated_fields = None
+        if fields is not None:
+            validated_fields = [ExtractField(**field) if isinstance(field, dict) else field for field in fields]
+
+        # Convert Pydantic BaseModel to JSON schema if advanced_schema is a BaseModel
+        validated_schema = advanced_schema
+        if advanced_schema is not None:
+            if isinstance(advanced_schema, BaseModel):
+                # BaseModel instance
+                validated_schema = advanced_schema.model_json_schema()
+            elif isinstance(advanced_schema, type) and issubclass(advanced_schema, BaseModel):
+                # BaseModel class
+                validated_schema = advanced_schema.model_json_schema()
 
         req = ImageExtractRequest(
             image_url=image_url,
             image_base64=image_base64,
-            output_schema=output_schema,
+            fields=validated_fields,
+            advanced_schema=validated_schema,
             instruction=instruction,
         )
         payload = req.model_dump(exclude_none=True)
@@ -209,7 +257,6 @@ class Client:
     ):
         """Send an image classify request with explicit arguments and validate with Pydantic."""
         logger.info("🔍 Starting image classify request")
-        from viscribe.models.image import ImageClassifyRequest, ImageClassifyResponse
 
         req = ImageClassifyRequest(
             image_url=image_url,
@@ -233,7 +280,6 @@ class Client:
     ):
         """Send an image VQA (ask) request with explicit arguments and validate with Pydantic."""
         logger.info("🔍 Starting image ask (VQA) request")
-        from viscribe.models.image import ImageAskRequest, ImageAskResponse
 
         req = ImageAskRequest(
             image_url=image_url,
@@ -254,7 +300,6 @@ class Client:
     ):
         """Send an image compare request with explicit arguments and validate with Pydantic."""
         logger.info("🔍 Starting image compare request")
-        from viscribe.models.image import ImageCompareRequest, ImageCompareResponse
 
         req = ImageCompareRequest(
             image1_url=image1_url,

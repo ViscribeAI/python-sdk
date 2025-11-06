@@ -4,10 +4,10 @@ from viscribe.logger import viscribe_logger
 viscribe_logger.set_logging(level="INFO")
 
 # Initialize the client
-viscribe_client = Client(api_key="your-api-key-here")
+viscribe_client = Client(api_key="vscrb-")
 
 # Example request_id (replace with an actual request_id from a previous request)
-request_id = "your-request-id-here"
+request_id = "95ad5697-b911-46e3-bf5d-e796bf0b3a44"
 
 # Check remaining credits
 credits = viscribe_client.get_credits()
@@ -21,8 +21,3 @@ feedback_response = viscribe_client.submit_feedback(
 )
 print(f"\nFeedback Response: {feedback_response}")
 
-# Get previous results using get_describe_image
-previous_result = viscribe_client.get_describe_image(request_id=request_id)
-print(f"\nRetrieved Previous Result: {previous_result}")
-
-viscribe_client.close()
