@@ -1,6 +1,6 @@
 import asyncio
 
-from viscribe.async_client import AsyncClient
+from viscribe import AsyncClient
 from viscribe.logger import viscribe_logger
 from pydantic import BaseModel
 

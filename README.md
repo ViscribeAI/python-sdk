@@ -1,5 +1,5 @@
 <div align="center">
-  <a href="https://viscribe.ai"><img src="assets/viscribe-logo.png" alt="Viscribe Logo" width="200"></a>
+  <a href="https://viscribe.ai"><img src="https://raw.githubusercontent.com/ViscribeAI/python-sdk/refs/heads/main/assets/viscribe-logo.png" alt="Viscribe Logo" width="200"></a>
 </div>
 
 # 🌐 ViscribeAI -  Python SDK
@@ -46,7 +46,7 @@ client = Client(api_key="your-api-key-here")
 Generate a natural language description of an image, optionally with tags.
 
 ```python
-from viscribe.client import Client
+from viscribe import Client
 client = Client(api_key="your-api-key-here")
 
 resp = client.describe_image(
@@ -159,7 +159,7 @@ All endpoints support async operations:
 
 ```python
 import asyncio
-from viscribe.async_client import AsyncClient
+from viscribe import AsyncClient
 
 async def main():
     client = AsyncClient(api_key="your-api-key-here")
