@@ -1,6 +1,6 @@
 [project]
 name = "viscribe"
-version = "1.8.0"
+version = "1.0.1"
 description = "ViscribeAI SDK"
 authors = [
     { name = "viscriber0", email = "contact@viscribe.ai" }
