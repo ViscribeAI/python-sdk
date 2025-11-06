@@ -1,4 +1,6 @@
-# 🌐 Viscribe Python SDK
+<a href="https://viscribe.ai"><img src="assets/viscribe-logo.png" alt="Viscribe Logo" width="200"></a>
+
+# 🌐 ViscribeAI -  Python SDK
 
 [![PyPI version](https://badge.fury.io/py/viscribe.svg)](https://badge.fury.io/py/viscribe)
 [![Python Support](https://img.shields.io/pypi/pyversions/viscribe.svg)](https://pypi.org/project/viscribe/)
@@ -7,6 +9,8 @@
 [![Documentation Status](https://readthedocs.org/projects/viscribe/badge/?version=latest)](https://docs.viscribe.ai)
 
 Official [Python SDK](https://viscribe.ai) for ViscribeAI - AI-powered image understanding and analysis.
+
+> 🎁 **Get started with free credits!** Visit [dashboard.viscribe.ai](https://dashboard.viscribe.ai) to sign up and get your API key.
 
 ## 📦 Installation
 
@@ -50,18 +54,7 @@ resp = client.describe_image(
 print(resp)
 ```
 
-### 2. Extract Structured Data from Image
-Extract structured data from an image using a custom schema.
-
-```python
-resp = client.extract_image(
-    image_url="https://img.com/prod.jpg",
-    output_schema={"type": "object", "properties": {"product_name": {"type": "string"}}}
-)
-print(resp)
-```
-
-### 3. Classify Image
+### 2. Classify Image
 Classify an image into one or more categories.
 
 ```python
@@ -72,7 +65,7 @@ resp = client.classify_image(
 print(resp)
 ```
 
-### 4. Visual Question Answering (VQA)
+### 3. Visual Question Answering (VQA)
 Ask a question about the content of an image and get an answer.
 
 ```python
@@ -82,6 +75,50 @@ resp = client.ask_image(
 )
 print(resp)
 ```
+
+### 4. Extract Structured Data from Image
+Extract structured data from an image using either simple fields or an advanced schema.
+
+#### Simple Fields (Recommended for basic extraction)
+Use simple fields for straightforward data extraction (max 10 fields):
+
+```python
+resp = client.extract_image(
+    image_url="https://img.com/prod.jpg",
+    fields=[
+        {"name": "product_name", "type": "text", "description": "Name of the product"},
+        {"name": "price", "type": "number", "description": "Product price"},
+        {"name": "tags", "type": "array_text", "description": "Product tags"},
+    ]
+)
+print(resp.extracted_data)
+```
+
+**Field Types:**
+- `text`: Single text value
+- `number`: Single numeric value
+- `array_text`: Array of text values (max 5 items)
+- `array_number`: Array of numeric values (max 5 items)
+
+#### Advanced Schema (For complex/nested structures)
+Use advanced schema for complex nested structures or when you need more control:
+
+```python
+from pydantic import BaseModel
+
+class Product(BaseModel):
+    product_name: str
+    price: float
+    specifications: dict
+
+resp = client.extract_image(
+    image_url="https://img.com/prod.jpg",
+    advanced_schema=Product  # Pass the class directly
+)
+print(resp.extracted_data)
+```
+
+> **Note:** Either `fields` or `advanced_schema` must be provided, not both.
 
 ### 5. Compare Images
 Compare two images and get a description of their similarities and differences.
@@ -168,5 +205,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [GitHub](https://github.com/ViscribeAI/python-sdk)
 
 ---
+
+> 🎁 **Get started with free credits!** Visit [dashboard.viscribe.ai](https://dashboard.viscribe.ai) to sign up and get your API key.
 
 Made with ❤️ by [ViscribeAI](https://viscribe.ai)
