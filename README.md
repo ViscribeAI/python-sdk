@@ -1,4 +1,6 @@
-<a href="https://viscribe.ai"><img src="assets/viscribe-logo.png" alt="Viscribe Logo" width="200"></a>
+<div align="center">
+  <a href="https://viscribe.ai"><img src="assets/viscribe-logo.png" alt="Viscribe Logo" width="200"></a>
+</div>
 
 # 🌐 ViscribeAI -  Python SDK
 
